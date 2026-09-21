@@ -129,7 +129,8 @@ export function ModelCharts(props: ModelChartsProps) {
             {t('Model Call Analytics')}
           </div>
           <span className='text-muted-foreground text-xs'>
-            {t('Total:')} {chartData.totalCountDisplay}
+            {t('Total:')} {chartData.totalCountDisplay} ·{' '}
+            {chartData.totalTokensDisplay} {t('Tokens')}
           </span>
         </div>
 
