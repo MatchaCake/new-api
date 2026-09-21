@@ -138,6 +138,9 @@ export function MarketShareSection(props: MarketShareSectionProps) {
       seriesField: 'vendor',
       stack: true,
       paddingInner: 0.12,
+      // With few history buckets the auto bar width fills the whole plot;
+      // cap it so sparse data doesn't render as giant colour blocks.
+      barMaxWidth: 48,
       legends: { visible: false },
       color: { specified: colourMap },
       axes: [
