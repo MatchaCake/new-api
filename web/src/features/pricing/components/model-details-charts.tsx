@@ -345,6 +345,7 @@ export function ThroughputBarChart(props: {
       data: [{ id: 'tput', values: filtered.map((r) => ({ ...r })) }],
       xField: 'throughput_tps',
       yField: 'group',
+      barMaxWidth: 48,
       bar: {
         style: {
           fill: '#6366f1',
