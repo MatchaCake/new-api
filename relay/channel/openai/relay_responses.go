@@ -1,9 +1,11 @@
 package openai
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
@@ -38,6 +40,7 @@ func OaiResponsesHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http
 
 	info.ObserveResponseModel(responsesResponse.Model)
 	responseBody = rewriteSGLangResponsesCreatedAt(info, responseBody, "created_at", responsesResponse.CreatedAt)
+	responseBody = namespaceResponsesItemIDs(responseBody, responsesResponse.ID)
 
 	// 写入新的 response body
 	service.IOCopyBytesGracefully(c, resp, responseBody)
@@ -79,6 +82,9 @@ func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 
 	accumulator := service.NewResponsesUsageAccumulator(info)
 
+	// The response id arrives on the response.* envelope events (response.created
+	// first); item events in between only carry item ids, so remember it here.
+	responseID := ""
 	helper.StreamScannerHandler(c, resp, info, func(data string, sr *helper.StreamResult) {
 
 		// 检查当前数据是否包含 completed 状态和 usage 信息
@@ -90,7 +96,11 @@ func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 		}
 		if streamResponse.Response != nil {
 			data = string(rewriteSGLangResponsesCreatedAt(info, []byte(data), "response.created_at", streamResponse.Response.CreatedAt))
+			if streamResponse.Response.ID != "" {
+				responseID = streamResponse.Response.ID
+			}
 		}
+		data = string(namespaceResponsesItemIDs([]byte(data), responseID))
 		sendResponsesStreamData(c, streamResponse, data)
 		accumulator.Observe(&streamResponse)
 	})
@@ -98,6 +108,45 @@ func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 	common.SetContextKey(c, constant.ContextKeyResponseStreamStatus, info.StreamStatus)
 	info.StreamStatus.RequireTerminal()
 	return accumulator.Finish(), nil
+}
+
+// collisionProneResponsesItemID matches the bare sequential output item ids
+// ("item_0", "item_1", …) some OpenAI-compatible upstreams emit. They restart
+// from zero on every response, so consecutive responses within one client
+// conversation reuse the same ids and break clients that track output items by
+// id across calls (Codex, for example, reorders turns when ids collide).
+// OpenAI itself namespaces item ids ("msg_…", "rs_…", "fc_…"), so genuine
+// upstream ids never match and pass through untouched.
+var collisionProneResponsesItemID = regexp.MustCompile(`^item_\d+$`)
+
+// namespaceResponsesItemIDs prefixes collision-prone output item ids with the
+// upstream response id, which is unique per response, so the ids clients see
+// stay unique across responses. It rewrites the item payloads ("item.id" on
+// output_item events, "output.N.id" on response snapshots) together with the
+// "item_id" references delta events carry. call_id values are never touched:
+// they must round-trip to the upstream for tool-output correlation.
+func namespaceResponsesItemIDs(payload []byte, responseID string) []byte {
+	if responseID == "" || !bytes.Contains(payload, []byte(`":"item_`)) {
+		return payload
+	}
+	paths := []string{"item.id", "item_id"}
+	for _, outputPath := range []string{"response.output", "output"} {
+		if output := gjson.GetBytes(payload, outputPath); output.IsArray() {
+			for i := range output.Array() {
+				paths = append(paths, fmt.Sprintf("%s.%d.id", outputPath, i))
+			}
+		}
+	}
+	for _, path := range paths {
+		id := gjson.GetBytes(payload, path)
+		if id.Type != gjson.String || !collisionProneResponsesItemID.MatchString(id.Str) {
+			continue
+		}
+		if patched, err := sjson.SetBytes(payload, path, responseID+"_"+id.Str); err == nil {
+			payload = patched
+		}
+	}
+	return payload
 }
 
 func rewriteSGLangResponsesCreatedAt(info *relaycommon.RelayInfo, payload []byte, path string, createdAt dto.IntValue) []byte {
