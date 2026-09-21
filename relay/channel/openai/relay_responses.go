@@ -37,6 +37,7 @@ func OaiResponsesHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http
 
 	info.ObserveResponseModel(responsesResponse.Model)
 	responseBody = rewriteSGLangResponsesCreatedAt(info, responseBody, "created_at", responsesResponse.CreatedAt)
+	responseBody = namespaceResponsesItemIDs(responseBody, responsesResponse.ID)
 
 	// 写入新的 response body
 	service.IOCopyBytesGracefully(c, resp, responseBody)
@@ -76,6 +77,9 @@ func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 
 	accumulator := service.NewResponsesUsageAccumulator(info)
 
+	// The response id arrives on the response.* envelope events (response.created
+	// first); item events in between only carry item ids, so remember it here.
+	responseID := ""
 	helper.StreamScannerHandler(c, resp, info, func(data string, sr *helper.StreamResult) {
 
 		// 检查当前数据是否包含 completed 状态和 usage 信息
@@ -87,7 +91,11 @@ func OaiResponsesStreamHandler(c *gin.Context, info *relaycommon.RelayInfo, resp
 		}
 		if streamResponse.Response != nil {
 			data = string(rewriteSGLangResponsesCreatedAt(info, []byte(data), "response.created_at", streamResponse.Response.CreatedAt))
+			if streamResponse.Response.ID != "" {
+				responseID = streamResponse.Response.ID
+			}
 		}
+		data = string(namespaceResponsesItemIDs([]byte(data), responseID))
 		accumulator.Observe(&streamResponse, common.StringToByteSlice(data))
 		if err := helper.ResponseChunkData(c, streamResponse, data); err != nil {
 			sr.Stop(err)
