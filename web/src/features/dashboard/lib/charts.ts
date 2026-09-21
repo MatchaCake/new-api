@@ -25,7 +25,13 @@ import type {
   ProcessedUserChartData,
 } from '@/features/dashboard/types'
 import { getCurrencyDisplay } from '@/lib/currency'
+import { formatTokens } from '@/lib/format'
 import { formatChartTime, type TimeGranularity } from '@/lib/time'
+
+// Bars grow to fill their band, so charts with only a couple of categories
+// render as huge colour blocks. Cap the width; VChart still shrinks bars
+// automatically when there are many categories.
+const BAR_MAX_WIDTH = 48
 
 type TFunction = (key: string) => string
 type TooltipLineItem = {
@@ -78,6 +84,9 @@ export function processChartData(
 
   const formatInt = (value: number) =>
     Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)
+  // formatTokens renders 0 as '-', which reads poorly in totals and tooltips
+  const formatTokensValue = (value: number) =>
+    value > 0 ? formatTokens(value) : '0'
   const formatQuotaValue = (value: number) => renderQuotaCompat(value, 4)
   const formatQuotaTotal = (value: number) => renderQuotaCompat(value, 2)
 
@@ -172,6 +181,7 @@ export function processChartData(
         yField: 'Usage',
         seriesField: 'Model',
         stack: true,
+        barMaxWidth: BAR_MAX_WIDTH,
         legends: { visible: true, selectMode: 'single' },
       },
       spec_area: {
@@ -201,6 +211,7 @@ export function processChartData(
         xField: 'Model',
         yField: 'Count',
         seriesField: 'Model',
+        barMaxWidth: BAR_MAX_WIDTH,
         legends: { visible: true, selectMode: 'single' },
         title: {
           visible: true,
@@ -209,6 +220,7 @@ export function processChartData(
       },
       totalQuotaDisplay: formatQuotaTotal(0),
       totalCountDisplay: formatInt(0),
+      totalTokensDisplay: '0',
     }
   }
 
@@ -303,12 +315,17 @@ export function processChartData(
     (sum, x) => sum + (Number(x.quota) || 0),
     0
   )
+  const totalTokensRaw = [...modelTotalsMap.values()].reduce(
+    (sum, x) => sum + (Number(x.tokens) || 0),
+    0
+  )
 
   // Pie chart (model call count proportion)
   const pieValues = Array.from(modelTotalsMap.entries())
     .map(([model, stats]) => ({
       type: model,
       value: Number(stats.count) || 0,
+      tokens: Number(stats.tokens) || 0,
     }))
     .sort((a, b) => b.value - a.value)
 
@@ -405,6 +422,7 @@ export function processChartData(
     Time: string
     Model: string
     Count: number
+    Tokens: number
   }> = []
   chartTimes.forEach((time) => {
     const timeData = topTrendModels.map((model) => {
@@ -413,17 +431,22 @@ export function processChartData(
         Time: time,
         Model: model,
         Count: Number(stats?.count) || 0,
+        Tokens: Number(stats?.tokens) || 0,
       }
     })
     if (otherTrendModels.length > 0) {
-      const otherCount = otherTrendModels.reduce((sum, model) => {
+      let otherCount = 0
+      let otherTokens = 0
+      otherTrendModels.forEach((model) => {
         const stats = timeModelMap.get(time)?.get(model)
-        return sum + (Number(stats?.count) || 0)
-      }, 0)
+        otherCount += Number(stats?.count) || 0
+        otherTokens += Number(stats?.tokens) || 0
+      })
       timeData.push({
         Time: time,
         Model: otherLabel,
         Count: otherCount,
+        Tokens: otherTokens,
       })
     }
     modelLineValues.push(...timeData)
@@ -436,16 +459,22 @@ export function processChartData(
     .map(([model, stats]) => ({
       Model: model,
       Count: Number(stats.count) || 0,
+      Tokens: Number(stats.tokens) || 0,
     }))
     .sort((a, b) => b.Count - a.Count)
 
   let rankValues: typeof allRankValues
   if (allRankValues.length > MAX_RANK_MODELS) {
     const topModels = allRankValues.slice(0, MAX_RANK_MODELS)
-    const otherCount = allRankValues
-      .slice(MAX_RANK_MODELS)
-      .reduce((sum, item) => sum + item.Count, 0)
-    rankValues = [...topModels, { Model: otherLabel, Count: otherCount }]
+    const overflow = allRankValues.slice(MAX_RANK_MODELS)
+    rankValues = [
+      ...topModels,
+      {
+        Model: otherLabel,
+        Count: overflow.reduce((sum, item) => sum + item.Count, 0),
+        Tokens: overflow.reduce((sum, item) => sum + item.Tokens, 0),
+      },
+    ]
   } else {
     rankValues = allRankValues
   }
@@ -482,6 +511,11 @@ export function processChartData(
               value: (datum: Record<string, unknown>) =>
                 formatInt(Number(datum?.value) || 0),
             },
+            {
+              key: () => tt('Tokens'),
+              value: (datum: Record<string, unknown>) =>
+                formatTokensValue(Number(datum?.tokens) || 0),
+            },
           ],
         },
       },
@@ -495,6 +529,7 @@ export function processChartData(
       yField: 'Usage',
       seriesField: 'Model',
       stack: true,
+      barMaxWidth: BAR_MAX_WIDTH,
       legends: { visible: true, selectMode: 'single' },
       color: modelColor,
       bar: {
@@ -595,6 +630,11 @@ export function processChartData(
               value: (datum: Record<string, unknown>) =>
                 formatInt(Number(datum?.Count) || 0),
             },
+            {
+              key: () => tt('Tokens'),
+              value: (datum: Record<string, unknown>) =>
+                formatTokensValue(Number(datum?.Tokens) || 0),
+            },
           ],
         },
         dimension: {
@@ -605,12 +645,7 @@ export function processChartData(
                 Number(datum?.Count) || 0,
             },
           ],
-          updateContent: (
-            array: Array<{
-              key: string
-              value: string | number
-            }>
-          ) => {
+          updateContent: (array: TooltipLineItem[]) => {
             const modelItems = array.filter(
               (item) => !isOtherTooltipKey(item.key)
             )
@@ -623,14 +658,22 @@ export function processChartData(
             array = [...modelItems, ...otherItems]
 
             let sum = 0
+            let tokenSum = 0
             for (let i = 0; i < array.length; i++) {
               const v = Number(array[i].value) || 0
+              const tokens =
+                Number(
+                  (array[i].datum as Record<string, unknown> | undefined)
+                    ?.Tokens
+                ) || 0
               sum += v
-              array[i].value = formatInt(v)
+              tokenSum += tokens
+              array[i].value =
+                `${formatInt(v)} · ${formatTokensValue(tokens)} ${tt('Tokens')}`
             }
             array.unshift({
               key: tt('Total:'),
-              value: formatInt(sum),
+              value: `${formatInt(sum)} · ${formatTokensValue(tokenSum)} ${tt('Tokens')}`,
             })
             return array
           },
@@ -658,6 +701,7 @@ export function processChartData(
       xField: 'Model',
       yField: 'Count',
       seriesField: 'Model',
+      barMaxWidth: BAR_MAX_WIDTH,
       legends: { visible: true, selectMode: 'single' },
       color: modelColor,
       title: {
@@ -677,6 +721,11 @@ export function processChartData(
               value: (datum: Record<string, unknown>) =>
                 formatInt(Number(datum?.Count) || 0),
             },
+            {
+              key: () => tt('Tokens'),
+              value: (datum: Record<string, unknown>) =>
+                formatTokensValue(Number(datum?.Tokens) || 0),
+            },
           ],
         },
       },
@@ -685,6 +734,7 @@ export function processChartData(
     },
     totalQuotaDisplay: formatQuotaTotal(totalQuotaRaw),
     totalCountDisplay: formatInt(totalTimes),
+    totalTokensDisplay: formatTokensValue(totalTokensRaw),
   }
 }
 
@@ -721,6 +771,7 @@ export function processUserChartData(
       yField: 'User',
       seriesField: 'User',
       direction: 'horizontal',
+      barMaxWidth: BAR_MAX_WIDTH,
       title: {
         visible: true,
         text: tt('User Consumption Ranking'),
@@ -820,6 +871,7 @@ export function processUserChartData(
       yField: 'User',
       seriesField: 'User',
       direction: 'horizontal',
+      barMaxWidth: BAR_MAX_WIDTH,
       title: {
         visible: true,
         text: tt('User Consumption Ranking'),
