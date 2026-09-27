@@ -1,0 +1,125 @@
+# Fork-only: once a day, rebase this fork's main onto QuantumNous/new-api main,
+# build the result and publish it as ghcr.io/matchacake/new-api:fork-latest.
+# Not intended for upstream.
+#
+# Order matters: the image is built first, main is force-pushed only after the
+# build succeeds, and fork-latest is moved last. A rebase conflict or build
+# failure leaves both main and fork-latest untouched.
+#
+# Pushing uses the FORK_SYNC_DEPLOY_KEY secret (a write deploy key) because
+# upstream commits touch .github/workflows, which GITHUB_TOKEN may not push.
+name: Sync upstream and build fork image
+
+on:
+  schedule:
+    - cron: "0 19 * * *" # 03:00 Asia/Singapore
+  workflow_dispatch:
+    inputs:
+      force_build:
+        description: "Build and publish even if upstream has no new commits"
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: fork-sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync_build:
+    name: Rebase onto upstream, build & publish
+    if: github.repository == 'MatchaCake/new-api'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out main
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: main
+          fetch-depth: 0
+          ssh-key: ${{ secrets.FORK_SYNC_DEPLOY_KEY }}
+
+      - name: Rebase onto upstream main
+        id: rebase
+        env:
+          FORCE_BUILD: ${{ inputs.force_build }}
+        run: |
+          git config user.name "fork-sync[bot]"
+          git config user.email "fork-sync@users.noreply.github.com"
+          git remote add upstream https://github.com/QuantumNous/new-api.git
+          git fetch --no-tags upstream main
+
+          OLD_SHA=$(git rev-parse HEAD)
+          echo "old_sha=$OLD_SHA" >> "$GITHUB_OUTPUT"
+
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "Fork main already contains upstream/main ($(git rev-parse --short upstream/main))."
+            if [ "$FORCE_BUILD" != "true" ]; then
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+              echo "No upstream changes; nothing to do." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          elif ! git rebase upstream/main; then
+            git rebase --abort
+            echo "::error::Rebase onto upstream/main conflicts; resolve manually. main and fork-latest were not changed."
+            exit 1
+          fi
+
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          VERSION="fork-$(date +'%Y%m%d')-${SHORT_SHA}"
+          echo "$VERSION" > VERSION
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Rebased onto upstream $(git rev-parse --short upstream/main)"
+            echo '```'
+            git log --oneline upstream/main..HEAD
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up Docker Buildx
+        if: steps.rebase.outputs.changed == 'true'
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Log in to GHCR
+        if: steps.rebase.outputs.changed == 'true'
+        uses: docker/login-action@c99871dec2022cc055c062a10cc1a1310835ceb4 # v4.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push versioned image
+        if: steps.rebase.outputs.changed == 'true'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ghcr.io/matchacake/new-api:${{ steps.rebase.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Push rebased main
+        if: steps.rebase.outputs.changed == 'true'
+        env:
+          OLD_SHA: ${{ steps.rebase.outputs.old_sha }}
+        run: git push --force-with-lease=main:"$OLD_SHA" origin HEAD:main
+
+      - name: Move fork-latest
+        if: steps.rebase.outputs.changed == 'true'
+        env:
+          VERSION: ${{ steps.rebase.outputs.version }}
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/matchacake/new-api:fork-latest \
+            "ghcr.io/matchacake/new-api:$VERSION"
+          {
+            echo "### GHCR image"
+            echo '```'
+            echo "ghcr.io/matchacake/new-api:fork-latest"
+            echo "ghcr.io/matchacake/new-api:$VERSION"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
