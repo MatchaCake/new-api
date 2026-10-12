@@ -285,6 +285,10 @@ func rejectInvalidTopUpQuota(c *gin.Context, userId int, amount int64) bool {
 	return false
 }
 
+// epayTopUpOrderName is the product name shown on the Epay cashier page.
+// Fork-specific: 抹茶公益站 labels every top-up order as a sponsorship.
+const epayTopUpOrderName = "抹茶公益站赞助"
+
 func RequestEpay(c *gin.Context) {
 	var req EpayRequest
 	err := c.ShouldBindJSON(&req)
@@ -330,7 +334,7 @@ func RequestEpay(c *gin.Context) {
 	uri, params, err := client.Purchase(&epay.PurchaseArgs{
 		Type:           req.PaymentMethod,
 		ServiceTradeNo: tradeNo,
-		Name:           fmt.Sprintf("TUC%d", req.Amount),
+		Name:           epayTopUpOrderName,
 		Money:          strconv.FormatFloat(payMoney, 'f', 2, 64),
 		Device:         epay.PC,
 		NotifyUrl:      notifyUrl,
