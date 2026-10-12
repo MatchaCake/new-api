@@ -159,6 +159,10 @@ func SubscriptionEpayNotify(c *gin.Context) {
 
 	LockOrder(verifyInfo.ServiceTradeNo)
 	defer UnlockOrder(verifyInfo.ServiceTradeNo)
+	if order := model.GetSubscriptionOrderByTradeNo(verifyInfo.ServiceTradeNo); order != nil && epayV2AmountMismatch(order.Money, verifyInfo.Money) {
+		_, _ = c.Writer.Write([]byte("fail"))
+		return
+	}
 
 	if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type); err != nil {
 		_, _ = c.Writer.Write([]byte("fail"))
@@ -209,6 +213,10 @@ func SubscriptionEpayReturn(c *gin.Context) {
 	if verifyInfo.TradeStatus == epay.StatusTradeSuccess {
 		LockOrder(verifyInfo.ServiceTradeNo)
 		defer UnlockOrder(verifyInfo.ServiceTradeNo)
+		if order := model.GetSubscriptionOrderByTradeNo(verifyInfo.ServiceTradeNo); order != nil && epayV2AmountMismatch(order.Money, verifyInfo.Money) {
+			c.Redirect(http.StatusFound, paymentReturnPath("/wallet?pay=fail"))
+			return
+		}
 		if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type); err != nil {
 			c.Redirect(http.StatusFound, paymentReturnPath("/wallet?pay=fail"))
 			return

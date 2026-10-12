@@ -134,7 +134,12 @@ type AmountRequest struct {
 	Amount int64 `json:"amount"`
 }
 
-func GetEpayClient() *epay.Client {
+// GetEpayClient returns the V1 (MD5) or V2 (RSA) client selected by
+// EpayVersion, or nil when the selected version is not fully configured.
+func GetEpayClient() epay.Service {
+	if operation_setting.IsEpayV2() {
+		return getEpayV2Client()
+	}
 	if operation_setting.PayAddress == "" || operation_setting.EpayId == "" || operation_setting.EpayKey == "" {
 		return nil
 	}
@@ -466,6 +471,11 @@ func EpayNotify(c *gin.Context) {
 		// 数据库行锁 + 事务内状态校验保证（多实例部署下同样安全）。
 		LockOrder(verifyInfo.ServiceTradeNo)
 		defer UnlockOrder(verifyInfo.ServiceTradeNo)
+		if topUp := model.GetTopUpByTradeNo(verifyInfo.ServiceTradeNo); topUp != nil && epayV2AmountMismatch(topUp.Money, verifyInfo.Money) {
+			logger.LogWarn(c.Request.Context(), common.LogText("Epay callback amount mismatch trade_no=%s expected=%.2f got=%s client_ip=%s", verifyInfo.ServiceTradeNo, topUp.Money, verifyInfo.Money, c.ClientIP()))
+			_, _ = c.Writer.Write([]byte("fail"))
+			return
+		}
 		alreadyDone, err := model.RechargeEpay(verifyInfo.ServiceTradeNo, verifyInfo.Type, c.ClientIP())
 		if err != nil {
 			switch {
