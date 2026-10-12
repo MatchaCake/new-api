@@ -130,6 +130,11 @@ var TelegramBotName = ""
 var QuotaForNewUser = 0
 var QuotaForInviter = 0
 var QuotaForInvitee = 0
+
+// AffTopUpRebatePercent is the share (in percent) of each successful paid
+// top-up credited to the payer's direct inviter as invitation quota.
+// 0 disables the rebate.
+var AffTopUpRebatePercent = 10.0
 var ChannelDisableThreshold = 5.0
 var AutomaticDisableChannelEnabled = false
 var AutomaticEnableChannelEnabled = false
