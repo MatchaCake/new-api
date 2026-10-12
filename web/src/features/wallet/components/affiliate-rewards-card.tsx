@@ -75,7 +75,7 @@ export function AffiliateRewardsCard({
             </h3>
             <p className='text-muted-foreground line-clamp-1 text-xs'>
               {t(
-                'Earn rewards when users join through your referral link. Transfer accumulated rewards to your balance anytime.'
+                'Earn a share of site credit each time a friend who signed up via your referral link pays online. Transfer rewards to your balance anytime.'
               )}
             </p>
           </div>
@@ -83,7 +83,7 @@ export function AffiliateRewardsCard({
 
         <div className='grid grid-cols-3 gap-1.5 text-center'>
           {[
-            [t('Pending'), formatQuota(user?.aff_quota ?? 0)],
+            [t('Transferable'), formatQuota(user?.aff_quota ?? 0)],
             [t('Total Earned'), formatQuota(user?.aff_history_quota ?? 0)],
             [t('Invites'), String(user?.aff_count ?? 0)],
           ].map(([label, value]) => (
