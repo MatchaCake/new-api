@@ -73,7 +73,7 @@ export function AffiliateRewardsCard({
             <h3 className='truncate text-sm font-semibold'>
               {t('Referral Program')}
             </h3>
-            <p className='text-muted-foreground line-clamp-1 text-xs'>
+            <p className='text-muted-foreground line-clamp-2 text-xs'>
               {t(
                 'Earn a share of site credit each time a friend who signed up via your referral link pays online. Transfer rewards to your balance anytime.'
               )}
