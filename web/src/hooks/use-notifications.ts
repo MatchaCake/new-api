@@ -63,7 +63,7 @@ function getAnnouncementKey(item: Record<string, unknown>): string {
  * Hook to manage notifications (Notice + Announcements)
  * Provides unread counts and read status management
  */
-export function useNotifications() {
+export function useNotifications(enabled = true) {
   const [popoverOpen, setPopoverOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'notice' | 'announcements'>(
     'notice'
@@ -78,18 +78,19 @@ export function useNotifications() {
     queryKey: ['notice'],
     queryFn: async () => requireServerSuccess(await getNotice()),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled,
   })
 
   // Fetch Announcements from status
   const { status, loading: statusLoading } = useStatus()
   const announcementsEnabled = status?.announcements_enabled ?? false
   const announcements = useMemo<Record<string, unknown>[]>(() => {
-    if (!announcementsEnabled) return []
+    if (!enabled || !announcementsEnabled) return []
     return ((status?.announcements || []) as Record<string, unknown>[]).slice(
       0,
       20
     )
-  }, [announcementsEnabled, status?.announcements])
+  }, [enabled, announcementsEnabled, status?.announcements])
 
   // Notification store
   const {
@@ -100,9 +101,8 @@ export function useNotifications() {
   } = useNotificationStore()
 
   // Extract notice content
-  const noticeContent = noticeResponse?.success
-    ? (noticeResponse.data || '').trim()
-    : ''
+  const noticeContent =
+    enabled && noticeResponse?.success ? (noticeResponse.data || '').trim() : ''
 
   // Calculate unread counts
   const unreadCounts = useMemo(() => {
