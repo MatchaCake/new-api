@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -13,11 +14,20 @@ func setAffRebateTestGlobals(t *testing.T, percent float64) {
 	t.Helper()
 	oldQuotaPerUnit := common.QuotaPerUnit
 	oldPercent := common.AffTopUpRebatePercent
+	oldPrice := operation_setting.Price
+	ps := operation_setting.GetPaymentSetting()
+	oldConfirmed, oldVersion := ps.ComplianceConfirmed, ps.ComplianceTermsVersion
 	common.QuotaPerUnit = 500000
 	common.AffTopUpRebatePercent = percent
+	// Test orders are Amount=2, Money=10, i.e. paid at list price 5.
+	operation_setting.Price = 5
+	ps.ComplianceConfirmed = true
+	ps.ComplianceTermsVersion = operation_setting.CurrentComplianceTermsVersion
 	t.Cleanup(func() {
 		common.QuotaPerUnit = oldQuotaPerUnit
 		common.AffTopUpRebatePercent = oldPercent
+		operation_setting.Price = oldPrice
+		ps.ComplianceConfirmed, ps.ComplianceTermsVersion = oldConfirmed, oldVersion
 	})
 }
 
@@ -104,6 +114,7 @@ func TestEpayTopUpRebatesDirectInviterOnceAndOnlyOneLevel(t *testing.T) {
 	require.Error(t, inviter.TransferAffQuotaToQuota(200000))
 	order5 := createEpayTestOrder(t, 602, "AFFREBATE-B-3", PaymentProviderEpay, common.TopUpStatusPending)
 	order5.Amount = 30
+	order5.Money = 150
 	require.NoError(t, DB.Save(&order5).Error)
 	_, err = RechargeEpay(order5.TradeNo, "alipay", "127.0.0.1")
 	require.NoError(t, err)
@@ -195,4 +206,51 @@ func TestAffTopUpRebatePercentOption(t *testing.T) {
 	assert.Equal(t, 12.5, common.AffTopUpRebatePercent, "invalid values are ignored")
 	require.NoError(t, updateOptionMap("AffTopUpRebatePercent", "0"))
 	assert.Equal(t, 0.0, common.AffTopUpRebatePercent)
+}
+
+func TestEpayRebateBaseIsActualPaymentNotBonus(t *testing.T) {
+	truncateTables(t)
+	setAffRebateTestGlobals(t, 10)
+
+	insertAffRebateTestUser(t, 641, "aff_disc_a", 0)
+	insertAffRebateTestUser(t, 642, "aff_disc_b", 641)
+	// Credits $2 (1,000,000) but only $1 worth was paid (e.g. 50% discount):
+	// the rebate is 10% of the paid $1, not of the credited $2.
+	order := createEpayTestOrder(t, 642, "AFFREBATE-DISC", PaymentProviderEpay, common.TopUpStatusPending)
+	order.Money = 5
+	require.NoError(t, DB.Save(&order).Error)
+	_, err := RechargeEpay(order.TradeNo, "alipay", "127.0.0.1")
+	require.NoError(t, err)
+	assert.Equal(t, 1000000, getAffRebateTestUser(t, 642).Quota)
+	assert.Equal(t, 50000, getAffRebateTestUser(t, 641).AffQuota)
+
+	// Paying more than list price never rebates more than the credited quota.
+	order2 := createEpayTestOrder(t, 642, "AFFREBATE-OVER", PaymentProviderEpay, common.TopUpStatusPending)
+	order2.Money = 100
+	require.NoError(t, DB.Save(&order2).Error)
+	_, err = RechargeEpay(order2.TradeNo, "alipay", "127.0.0.1")
+	require.NoError(t, err)
+	assert.Equal(t, 150000, getAffRebateTestUser(t, 641).AffQuota)
+}
+
+func TestTopUpRebateSkippedForSelfInviteAndWithoutCompliance(t *testing.T) {
+	truncateTables(t)
+	setAffRebateTestGlobals(t, 10)
+
+	insertAffRebateTestUser(t, 651, "aff_self", 651)
+	order := createEpayTestOrder(t, 651, "AFFREBATE-SELF", PaymentProviderEpay, common.TopUpStatusPending)
+	_, err := RechargeEpay(order.TradeNo, "alipay", "127.0.0.1")
+	require.NoError(t, err)
+	self := getAffRebateTestUser(t, 651)
+	assert.Equal(t, 1000000, self.Quota)
+	assert.Equal(t, 0, self.AffQuota)
+
+	insertAffRebateTestUser(t, 652, "aff_nocomp_a", 0)
+	insertAffRebateTestUser(t, 653, "aff_nocomp_b", 652)
+	operation_setting.GetPaymentSetting().ComplianceConfirmed = false
+	order2 := createEpayTestOrder(t, 653, "AFFREBATE-NOCOMP", PaymentProviderEpay, common.TopUpStatusPending)
+	_, err = RechargeEpay(order2.TradeNo, "alipay", "127.0.0.1")
+	require.NoError(t, err)
+	assert.Equal(t, 1000000, getAffRebateTestUser(t, 653).Quota)
+	assert.Equal(t, 0, getAffRebateTestUser(t, 652).AffQuota)
 }
