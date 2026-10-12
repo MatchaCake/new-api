@@ -78,7 +78,7 @@ func SubscriptionRequestEpay(c *gin.Context) {
 	tradeNo := fmt.Sprintf("%s%d", common.GetRandomString(6), time.Now().Unix())
 	tradeNo = fmt.Sprintf("SUBUSR%dNO%s", userId, tradeNo)
 
-	client := GetEpayClient()
+	client := getEpayService()
 	if client == nil {
 		common.ApiErrorT(c, "Payment information has not been configured by administrator")
 		return
@@ -141,7 +141,7 @@ func SubscriptionEpayNotify(c *gin.Context) {
 		return
 	}
 
-	client := GetEpayClient()
+	client := getEpayService()
 	if client == nil {
 		_, _ = c.Writer.Write([]byte("fail"))
 		return
@@ -159,6 +159,10 @@ func SubscriptionEpayNotify(c *gin.Context) {
 
 	LockOrder(verifyInfo.ServiceTradeNo)
 	defer UnlockOrder(verifyInfo.ServiceTradeNo)
+	if order := model.GetSubscriptionOrderByTradeNo(verifyInfo.ServiceTradeNo); order != nil && epayV2AmountMismatch(order.Money, verifyInfo.Money) {
+		_, _ = c.Writer.Write([]byte("fail"))
+		return
+	}
 
 	if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type); err != nil {
 		_, _ = c.Writer.Write([]byte("fail"))
@@ -196,7 +200,7 @@ func SubscriptionEpayReturn(c *gin.Context) {
 		return
 	}
 
-	client := GetEpayClient()
+	client := getEpayService()
 	if client == nil {
 		c.Redirect(http.StatusFound, paymentReturnPath("/wallet?pay=fail"))
 		return
@@ -209,6 +213,10 @@ func SubscriptionEpayReturn(c *gin.Context) {
 	if verifyInfo.TradeStatus == epay.StatusTradeSuccess {
 		LockOrder(verifyInfo.ServiceTradeNo)
 		defer UnlockOrder(verifyInfo.ServiceTradeNo)
+		if order := model.GetSubscriptionOrderByTradeNo(verifyInfo.ServiceTradeNo); order != nil && epayV2AmountMismatch(order.Money, verifyInfo.Money) {
+			c.Redirect(http.StatusFound, paymentReturnPath("/wallet?pay=fail"))
+			return
+		}
 		if err := model.CompleteSubscriptionOrder(verifyInfo.ServiceTradeNo, common.GetJsonString(verifyInfo), model.PaymentProviderEpay, verifyInfo.Type); err != nil {
 			c.Redirect(http.StatusFound, paymentReturnPath("/wallet?pay=fail"))
 			return
