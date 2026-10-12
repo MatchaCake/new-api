@@ -7376,6 +7376,10 @@
     "Zhipu": "Zhipu",
     "Zhipu GLM": "Zhipu GLM",
     "Zhipu V4": "Zhipu V 4",
-    "Zoom": "ズーム"
+    "Zoom": "ズーム",
+    "Invitation rebate {{quota}}: {{percent}}% of invited user top-up {{topup}}, added to invitation quota": "招待リベート {{quota}}：招待ユーザーのチャージ {{topup}} の {{percent}}%、招待クレジットに加算",
+    "Invitation top-up rebate percent must be between 0 and 100": "招待チャージリベート率は 0 から 100 の間で指定してください",
+    "Invitation Top-Up Rebate (%)": "招待チャージリベート率（%）",
+    "Percentage of each paid top-up by an invited user that is credited to their direct inviter's invitation quota (transferable to balance, not withdrawable). Redemption codes are excluded; set 0 to disable.": "招待されたユーザーのオンラインチャージごとに、この割合を直接の招待者の招待クレジットに加算します（残高へ振替可、出金不可）。引換コードは対象外。0 で無効。"
   }
 }
