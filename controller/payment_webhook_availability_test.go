@@ -1,6 +1,10 @@
 package controller
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -8,7 +12,9 @@ import (
 	"testing"
 
 	"github.com/Calcium-Ion/go-epay/epay"
+	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/epayv2"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/system_setting"
@@ -282,4 +288,78 @@ func TestEpayCallbacksVerifyBeforeSettlement(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestEpayV2NotifySettlesOnlyVerifiedMatchingCallbacks(t *testing.T) {
+	confirmPaymentComplianceForTest(t)
+	originals := []string{operation_setting.PayAddress, operation_setting.EpayId, operation_setting.EpayKey,
+		operation_setting.EpayVersion, operation_setting.EpayMerchantPrivateKey, operation_setting.EpayPlatformPublicKey}
+	originalPayMethods := operation_setting.PayMethods
+	t.Cleanup(func() {
+		operation_setting.PayAddress, operation_setting.EpayId, operation_setting.EpayKey = originals[0], originals[1], originals[2]
+		operation_setting.EpayVersion, operation_setting.EpayMerchantPrivateKey, operation_setting.EpayPlatformPublicKey = originals[3], originals[4], originals[5]
+		operation_setting.PayMethods = originalPayMethods
+	})
+
+	merchantKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	platformKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	b64 := func(der []byte, err error) string {
+		require.NoError(t, err)
+		return base64.StdEncoding.EncodeToString(der)
+	}
+
+	operation_setting.PayAddress = "https://pay.example.com"
+	operation_setting.EpayId = "7071"
+	operation_setting.EpayKey = ""
+	operation_setting.PayMethods = []map[string]string{{"type": "alipay"}}
+	operation_setting.EpayVersion = "v2"
+	operation_setting.EpayMerchantPrivateKey = b64(x509.MarshalPKCS8PrivateKey(merchantKey))
+	operation_setting.EpayPlatformPublicKey = ""
+	require.False(t, isEpayWebhookEnabled(), "v2 requires both RSA keys")
+	require.Nil(t, GetEpayClient())
+	operation_setting.EpayPlatformPublicKey = b64(x509.MarshalPKIXPublicKey(&platformKey.PublicKey))
+	require.True(t, isEpayWebhookEnabled(), "v2 does not need the V1 MD5 key")
+	_, isV2 := GetEpayClient().(*epayv2.Client)
+	require.True(t, isV2)
+
+	db := setupModelListControllerTestDB(t)
+	require.NoError(t, db.AutoMigrate(&model.User{}, &model.TopUp{}, &model.Log{}))
+	require.NoError(t, db.Create(&model.User{Id: 1, Username: "alice", Quota: 0}).Error)
+	require.NoError(t, db.Create(&model.TopUp{UserId: 1, Amount: 10, Money: 73, TradeNo: "USR1NOv2", PaymentMethod: "alipay",
+		PaymentProvider: model.PaymentProviderEpay, Status: common.TopUpStatusPending}).Error)
+
+	gateway, err := epayv2.NewClient("7071", "https://pay.example.com", b64(x509.MarshalPKCS8PrivateKey(platformKey)), b64(x509.MarshalPKIXPublicKey(&merchantKey.PublicKey)))
+	require.NoError(t, err)
+	callback := func(money string, tamper func(url.Values)) string {
+		params := map[string]string{"pid": "7071", "trade_no": "P1", "out_trade_no": "USR1NOv2", "type": "alipay",
+			"trade_status": epay.StatusTradeSuccess, "name": "TUC10", "money": money, "timestamp": "1721206072"}
+		sign, err := gateway.Sign(params)
+		require.NoError(t, err)
+		values := url.Values{"sign": {sign}, "sign_type": {"RSA"}}
+		for k, v := range params {
+			values.Set(k, v)
+		}
+		if tamper != nil {
+			tamper(values)
+		}
+		recorder := httptest.NewRecorder()
+		router := gin.New()
+		router.GET("/api/user/epay/notify", EpayNotify)
+		router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/api/user/epay/notify?"+values.Encode(), nil))
+		return recorder.Body.String()
+	}
+	status := func() string { return model.GetTopUpByTradeNo("USR1NOv2").Status }
+
+	assert.Equal(t, "fail", callback("73.00", func(v url.Values) { v.Set("money", "0.01") }), "tampered after signing")
+	assert.Equal(t, "fail", callback("0.01", nil), "validly signed but underpaid")
+	assert.Equal(t, common.TopUpStatusPending, status())
+
+	assert.Equal(t, "success", callback("73.00", nil))
+	assert.Equal(t, common.TopUpStatusSuccess, status())
+	assert.Equal(t, "success", callback("73.00", nil), "duplicate callback is acknowledged")
+	user, err := model.GetUserById(1, true)
+	require.NoError(t, err)
+	assert.Equal(t, int(10*common.QuotaPerUnit), user.Quota, "credited exactly once")
 }
