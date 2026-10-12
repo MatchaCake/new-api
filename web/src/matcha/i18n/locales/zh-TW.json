@@ -3,6 +3,6 @@
   "Invitation top-up rebate percent must be between 0 and 100": "邀請儲值返佣比例必須在 0 到 100 之間",
   "Invitation Top-Up Rebate (%)": "邀請儲值返佣比例（%）",
   "Percentage of each paid top-up by an invited user that is credited to their direct inviter's invitation quota (transferable to balance, not withdrawable). Redemption codes are excluded; set 0 to disable.": "受邀使用者每次線上儲值到帳後，依此比例計入其直接邀請人的邀請額度（可劃轉到餘額，不可提現）。兌換碼不計；設為 0 關閉。",
-  "Earn a share of site credit each time a friend who signed up via your referral link pays online. Transfer rewards to your balance anytime.": "好友透過您的推薦連結註冊後，每次線上支付贊助，您可獲得一定比例的站內額度回饋，可隨時劃轉到餘額。",
+  "Earn a share of site credit each time a friend who signed up via your referral link pays online. Transfer rewards to your balance anytime.": "好友透過推薦連結註冊後，每次線上支付贊助，您可獲得一定比例的站內額度回饋。",
   "Transferable": "可劃轉額度"
 }
