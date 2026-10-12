@@ -8,6 +8,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
@@ -147,18 +148,47 @@ func computeAffTopUpRebate(creditedQuota int, percent float64) int {
 	return int(rebate.IntPart())
 }
 
+// epayPaidQuota converts the money actually paid for an Epay order back into
+// quota at the configured list price, capped at the credited quota. Any
+// discount or bonus that credits more than was paid is therefore excluded
+// from the rebate base.
+func epayPaidQuota(topUp *TopUp, creditedQuota int) int {
+	if operation_setting.Price <= 0 || topUp.Money <= 0 {
+		return 0
+	}
+	paid := decimal.NewFromFloat(topUp.Money).
+		Div(decimal.NewFromFloat(operation_setting.Price)).
+		Mul(decimal.NewFromFloat(common.QuotaPerUnit)).
+		Round(0)
+	if !paid.IsPositive() {
+		return 0
+	}
+	if paid.GreaterThanOrEqual(decimal.NewFromInt(int64(creditedQuota))) {
+		return creditedQuota
+	}
+	return int(paid.IntPart())
+}
+
 // settleTopUpQuota credits a paid top-up to the payer and, in the same
 // transaction, credits the configured rebate to the payer's direct inviter's
-// invitation quota (aff_quota / aff_history). Callers only reach this on the
-// pending -> success transition of the order row they hold locked, so a
-// repeated callback for the same order can never grant the rebate twice.
-// Redemption codes deliberately use creditTopUpQuota directly and earn no rebate.
-func settleTopUpQuota(tx *gorm.DB, topUp *TopUp, creditedQuota int, updates map[string]any) (*inviterTopUpRebate, error) {
+// invitation quota (aff_quota / aff_history). rebateBaseQuota is the quota
+// equivalent of what the payer actually paid (never more than creditedQuota).
+// Callers only reach this on the pending -> success transition of the order
+// row they hold locked, so a repeated callback for the same order can never
+// grant the rebate twice. Redemption codes deliberately use creditTopUpQuota
+// directly and earn no rebate.
+func settleTopUpQuota(tx *gorm.DB, topUp *TopUp, creditedQuota int, rebateBaseQuota int, updates map[string]any) (*inviterTopUpRebate, error) {
 	if err := creditTopUpQuota(tx, topUp.UserId, creditedQuota, updates); err != nil {
 		return nil, err
 	}
+	if !operation_setting.IsPaymentComplianceConfirmed() {
+		return nil, nil
+	}
+	if rebateBaseQuota > creditedQuota {
+		rebateBaseQuota = creditedQuota
+	}
 	percent := common.AffTopUpRebatePercent
-	rebateQuota := computeAffTopUpRebate(creditedQuota, percent)
+	rebateQuota := computeAffTopUpRebate(rebateBaseQuota, percent)
 	if rebateQuota <= 0 {
 		return nil, nil
 	}
@@ -184,7 +214,7 @@ func settleTopUpQuota(tx *gorm.DB, topUp *TopUp, creditedQuota int, updates map[
 		InviterId:  payer.InviterId,
 		InviteeId:  payer.Id,
 		Quota:      rebateQuota,
-		TopUpQuota: creditedQuota,
+		TopUpQuota: rebateBaseQuota,
 		Percent:    percent,
 		TradeNo:    topUp.TradeNo,
 	}, nil
@@ -306,7 +336,7 @@ func RechargeEpay(tradeNo string, actualPaymentMethod string, callerIp string) (
 			return err
 		}
 		var settleErr error
-		rebate, settleErr = settleTopUpQuota(tx, topUp, quotaToAdd, nil)
+		rebate, settleErr = settleTopUpQuota(tx, topUp, quotaToAdd, epayPaidQuota(topUp, quotaToAdd), nil)
 		return settleErr
 	})
 	if err != nil {
@@ -368,7 +398,7 @@ func Recharge(referenceId string, customerId string, callerIp string) (err error
 			return ErrInvalidTopUpQuota
 		}
 		var settleErr error
-		rebate, settleErr = settleTopUpQuota(tx, topUp, quota, map[string]any{
+		rebate, settleErr = settleTopUpQuota(tx, topUp, quota, quota, map[string]any{
 			"stripe_customer": customerId,
 		})
 		return settleErr
@@ -602,7 +632,11 @@ func ManualCompleteTopUp(tradeNo string, callerIp string) error {
 
 		// 增加用户额度（立即写库，保持一致性）
 		var settleErr error
-		if rebate, settleErr = settleTopUpQuota(tx, topUp, quotaToAdd, nil); settleErr != nil {
+		rebateBase := quotaToAdd
+		if topUp.PaymentProvider == PaymentProviderEpay {
+			rebateBase = epayPaidQuota(topUp, quotaToAdd)
+		}
+		if rebate, settleErr = settleTopUpQuota(tx, topUp, quotaToAdd, rebateBase, nil); settleErr != nil {
 			return settleErr
 		}
 
@@ -682,7 +716,7 @@ func RechargeCreem(referenceId string, customerEmail string, customerName string
 		}
 
 		var settleErr error
-		rebate, settleErr = settleTopUpQuota(tx, topUp, quota, updateFields)
+		rebate, settleErr = settleTopUpQuota(tx, topUp, quota, quota, updateFields)
 		return settleErr
 	})
 
@@ -744,7 +778,7 @@ func RechargeWaffo(tradeNo string, callerIp string) (err error) {
 		}
 
 		var settleErr error
-		rebate, settleErr = settleTopUpQuota(tx, topUp, quotaToAdd, nil)
+		rebate, settleErr = settleTopUpQuota(tx, topUp, quotaToAdd, quotaToAdd, nil)
 		return settleErr
 	})
 
@@ -808,7 +842,7 @@ func RechargeWaffoPancake(tradeNo string) (err error) {
 		}
 
 		var settleErr error
-		rebate, settleErr = settleTopUpQuota(tx, topUp, quotaToAdd, nil)
+		rebate, settleErr = settleTopUpQuota(tx, topUp, quotaToAdd, quotaToAdd, nil)
 		return settleErr
 	})
 
