@@ -7364,6 +7364,10 @@
     "Zhipu": "Zhipu",
     "Zhipu GLM": "Zhipu GLM",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "Invitation rebate {{quota}}: {{percent}}% of invited user top-up {{topup}}, added to invitation quota": "Invitation rebate {{quota}}: {{percent}}% of invited user top-up {{topup}}, added to invitation quota",
+    "Invitation top-up rebate percent must be between 0 and 100": "Invitation top-up rebate percent must be between 0 and 100",
+    "Invitation Top-Up Rebate (%)": "Invitation Top-Up Rebate (%)",
+    "Percentage of each paid top-up by an invited user that is credited to their direct inviter's invitation quota (transferable to balance, not withdrawable). Redemption codes are excluded; set 0 to disable.": "Percentage of each paid top-up by an invited user that is credited to their direct inviter's invitation quota (transferable to balance, not withdrawable). Redemption codes are excluded; set 0 to disable."
   }
 }

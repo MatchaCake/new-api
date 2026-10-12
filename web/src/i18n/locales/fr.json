@@ -7364,6 +7364,10 @@
     "Zhipu": "Zhipu",
     "Zhipu GLM": "Zhipu GLM",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "Invitation rebate {{quota}}: {{percent}}% of invited user top-up {{topup}}, added to invitation quota": "Commission de parrainage {{quota}} : {{percent}} % de la recharge {{topup}} de l'utilisateur invité, ajoutée au quota d'invitation",
+    "Invitation top-up rebate percent must be between 0 and 100": "Le pourcentage de commission de parrainage doit être compris entre 0 et 100",
+    "Invitation Top-Up Rebate (%)": "Commission de parrainage sur recharge (%)",
+    "Percentage of each paid top-up by an invited user that is credited to their direct inviter's invitation quota (transferable to balance, not withdrawable). Redemption codes are excluded; set 0 to disable.": "Pourcentage de chaque recharge payée par un utilisateur invité crédité au quota d'invitation de son parrain direct (transférable vers le solde, non retirable). Les codes d'échange sont exclus ; 0 pour désactiver."
   }
 }
