@@ -55,6 +55,7 @@ const quotaSchema = z.object({
   QuotaForNewUser: z.coerce.number().min(0),
   QuotaForInviter: z.coerce.number().min(0),
   QuotaForInvitee: z.coerce.number().min(0),
+  AffTopUpRebatePercent: z.coerce.number().min(0).max(100),
   TopUpLink: z.string(),
   quota_setting: z.object({
     enable_free_model_pre_consume: z.boolean(),
@@ -273,6 +274,35 @@ export function QuotaSettingsSection({
                     {t('Quota given to invited users ({{formattedQuota}})', {
                       formattedQuota: formatQuotaInputValue(field.value),
                     })}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='AffTopUpRebatePercent'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Invitation Top-Up Rebate (%)')}</FormLabel>
+                  <FormControl>
+                    <Input
+                      type='number'
+                      min={0}
+                      max={100}
+                      step='any'
+                      value={field.value ?? ''}
+                      onChange={handleNumberChange(field.onChange)}
+                      name={field.name}
+                      onBlur={field.onBlur}
+                      ref={field.ref}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      "Percentage of each paid top-up by an invited user that is credited to their direct inviter's invitation quota (transferable to balance, not withdrawable). Redemption codes are excluded; set 0 to disable."
+                    )}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
