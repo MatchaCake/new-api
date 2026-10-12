@@ -2,5 +2,7 @@
   "Invitation rebate {{quota}}: {{percent}}% of invited user top-up {{topup}}, added to invitation quota": "Hoa hồng giới thiệu {{quota}}: {{percent}}% khoản nạp {{topup}} của người được mời, đã cộng vào hạn mức mời",
   "Invitation top-up rebate percent must be between 0 and 100": "Tỷ lệ hoa hồng nạp tiền giới thiệu phải nằm trong khoảng 0 đến 100",
   "Invitation Top-Up Rebate (%)": "Hoa hồng nạp tiền giới thiệu (%)",
-  "Percentage of each paid top-up by an invited user that is credited to their direct inviter's invitation quota (transferable to balance, not withdrawable). Redemption codes are excluded; set 0 to disable.": "Tỷ lệ của mỗi lần nạp tiền trả phí của người được mời được cộng vào hạn mức mời của người mời trực tiếp (có thể chuyển sang số dư, không thể rút). Không áp dụng mã đổi thưởng; đặt 0 để tắt."
+  "Percentage of each paid top-up by an invited user that is credited to their direct inviter's invitation quota (transferable to balance, not withdrawable). Redemption codes are excluded; set 0 to disable.": "Tỷ lệ của mỗi lần nạp tiền trả phí của người được mời được cộng vào hạn mức mời của người mời trực tiếp (có thể chuyển sang số dư, không thể rút). Không áp dụng mã đổi thưởng; đặt 0 để tắt.",
+  "Earn a share of site credit each time a friend who signed up via your referral link pays online. Transfer rewards to your balance anytime.": "Nhận một phần tín dụng nội bộ mỗi khi bạn bè đăng ký qua liên kết giới thiệu của bạn thanh toán trực tuyến. Chuyển phần thưởng vào số dư bất cứ lúc nào.",
+  "Transferable": "Có thể chuyển"
 }
