@@ -7286,6 +7286,10 @@
     "Zhipu": "智譜",
     "Zhipu GLM": "智譜GLM",
     "Zhipu V4": "智譜 V4",
-    "Zoom": "縮放"
+    "Zoom": "縮放",
+    "Invitation rebate {{quota}}: {{percent}}% of invited user top-up {{topup}}, added to invitation quota": "邀請返佣 {{quota}}：受邀使用者儲值 {{topup}} 的 {{percent}}%，已計入邀請額度",
+    "Invitation top-up rebate percent must be between 0 and 100": "邀請儲值返佣比例必須在 0 到 100 之間",
+    "Invitation Top-Up Rebate (%)": "邀請儲值返佣比例（%）",
+    "Percentage of each paid top-up by an invited user that is credited to their direct inviter's invitation quota (transferable to balance, not withdrawable). Redemption codes are excluded; set 0 to disable.": "受邀使用者每次線上儲值到帳後，依此比例計入其直接邀請人的邀請額度（可劃轉到餘額，不可提現）。兌換碼不計；設為 0 關閉。"
   }
 }

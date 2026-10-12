@@ -197,7 +197,14 @@ func UpdateOption(c *gin.Context) {
 		option.Value = fmt.Sprintf("%v", option.Value)
 	}
 	switch option.Key {
-	case "QuotaForInviter", "QuotaForInvitee":
+	case "QuotaForInviter", "QuotaForInvitee", "AffTopUpRebatePercent":
+		if option.Key == "AffTopUpRebatePercent" {
+			percent, err := strconv.ParseFloat(strings.TrimSpace(option.Value.(string)), 64)
+			if err != nil || percent < 0 || percent > 100 {
+				common.ApiErrorT(c, "Invitation top-up rebate percent must be between 0 and 100")
+				return
+			}
+		}
 		if isPositiveOptionValue(option.Value.(string)) && !operation_setting.IsPaymentComplianceConfirmed() {
 			common.ApiErrorT(c, "Payment, redemption, subscription, and invitation reward features are disabled. The administrator must confirm compliance terms before enabling them.")
 			return
