@@ -104,6 +104,9 @@ const paymentSchema = z.object({
   }, 'Provide a valid callback URL starting with http:// or https://'),
   EpayId: z.string(),
   EpayKey: z.string(),
+  EpayVersion: z.string(),
+  EpayMerchantPrivateKey: z.string(),
+  EpayPlatformPublicKey: z.string(),
   Price: z.coerce.number().min(0),
   MinTopUp: z.coerce.number().min(0),
   CustomCallbackAddress: z
@@ -423,6 +426,9 @@ export function PaymentSettingsSection({
       PayAddress: removeTrailingSlash(values.PayAddress),
       EpayId: values.EpayId.trim(),
       EpayKey: values.EpayKey.trim(),
+      EpayVersion: values.EpayVersion === 'v2' ? 'v2' : 'v1',
+      EpayMerchantPrivateKey: values.EpayMerchantPrivateKey.trim(),
+      EpayPlatformPublicKey: values.EpayPlatformPublicKey.trim(),
       Price: values.Price,
       MinTopUp: values.MinTopUp,
       CustomCallbackAddress: removeTrailingSlash(values.CustomCallbackAddress),
@@ -465,6 +471,9 @@ export function PaymentSettingsSection({
       PayAddress: removeTrailingSlash(initialRef.current.PayAddress),
       EpayId: initialRef.current.EpayId.trim(),
       EpayKey: initialRef.current.EpayKey.trim(),
+      EpayVersion: initialRef.current.EpayVersion === 'v2' ? 'v2' : 'v1',
+      EpayMerchantPrivateKey: initialRef.current.EpayMerchantPrivateKey.trim(),
+      EpayPlatformPublicKey: initialRef.current.EpayPlatformPublicKey.trim(),
       Price: initialRef.current.Price,
       MinTopUp: initialRef.current.MinTopUp,
       CustomCallbackAddress: removeTrailingSlash(
@@ -520,6 +529,30 @@ export function PaymentSettingsSection({
 
     if (sanitized.EpayKey && sanitized.EpayKey !== initial.EpayKey) {
       updates.push({ key: 'EpayKey', value: sanitized.EpayKey })
+    }
+
+    if (sanitized.EpayVersion !== initial.EpayVersion) {
+      updates.push({ key: 'EpayVersion', value: sanitized.EpayVersion })
+    }
+
+    if (
+      sanitized.EpayMerchantPrivateKey &&
+      sanitized.EpayMerchantPrivateKey !== initial.EpayMerchantPrivateKey
+    ) {
+      updates.push({
+        key: 'EpayMerchantPrivateKey',
+        value: sanitized.EpayMerchantPrivateKey,
+      })
+    }
+
+    if (
+      sanitized.EpayPlatformPublicKey &&
+      sanitized.EpayPlatformPublicKey !== initial.EpayPlatformPublicKey
+    ) {
+      updates.push({
+        key: 'EpayPlatformPublicKey',
+        value: sanitized.EpayPlatformPublicKey,
+      })
     }
 
     if (sanitized.Price !== initial.Price) {
@@ -1249,6 +1282,87 @@ export function PaymentSettingsSection({
                         </FormControl>
                         <FormDescription>
                           {t('Leave blank unless rotating the secret')}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name='EpayVersion'
+                  render={({ field }) => (
+                    <SettingsSwitchItem>
+                      <SettingsSwitchContent>
+                        <FormLabel>{t('Use Epay V2 (RSA) API')}</FormLabel>
+                        <FormDescription>
+                          {t(
+                            'Sign requests with the merchant RSA private key and verify callbacks with the platform public key. When off, the V1 MD5 secret key is used.'
+                          )}
+                        </FormDescription>
+                      </SettingsSwitchContent>
+                      <FormControl>
+                        <Switch
+                          checked={field.value === 'v2'}
+                          onCheckedChange={(checked) =>
+                            field.onChange(checked ? 'v2' : 'v1')
+                          }
+                        />
+                      </FormControl>
+                    </SettingsSwitchItem>
+                  )}
+                />
+
+                <div className='grid gap-6 md:grid-cols-2'>
+                  <FormField
+                    control={form.control}
+                    name='EpayMerchantPrivateKey'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('Epay V2 merchant private key')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type='password'
+                            placeholder={t('Enter new key to update')}
+                            autoComplete='new-password'
+                            {...field}
+                            onChange={(event) =>
+                              field.onChange(event.target.value)
+                            }
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t(
+                            'Merchant RSA private key (PEM or base64). Leave blank unless rotating the key.'
+                          )}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name='EpayPlatformPublicKey'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('Epay V2 platform public key')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type='password'
+                            placeholder={t('Enter new key to update')}
+                            autoComplete='new-password'
+                            {...field}
+                            onChange={(event) =>
+                              field.onChange(event.target.value)
+                            }
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t(
+                            'Platform RSA public key (PEM or base64) used to verify callbacks. Leave blank unless rotating the key.'
+                          )}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
