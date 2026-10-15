@@ -1,0 +1,390 @@
+<style>
+  .md { --g:#4f8a2b; --g2:#6aa63f; --soft:#f2f7ec; --ink:#1f2a1a; --mute:#5c6b55; --card:#ffffff; --line:#dfe9d4; --code:#f6f9f2; --warnbg:#fff8e6; --warnline:#f0d48a; --tip:#eef6e7;
+        color:var(--ink); background:var(--soft); font-family:-apple-system, "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif; font-size:15px; line-height:1.75; padding-top:64px; }
+  .dark .md { --soft:#121a10; --ink:#e7efe0; --mute:#9fb096; --card:#1a2417; --line:#2b3a26; --code:#0f150d; --warnbg:#2a2412; --warnline:#5a4a1c; --tip:#18241a; }
+  .md * { box-sizing:border-box; }
+  .md-wrap { max-width:920px; margin:0 auto; padding:28px 20px 56px; }
+  .md a { color:var(--g); text-decoration:none; border-bottom:1px solid transparent; }
+  .dark .md a { color:#a9d48a; }
+  .md a:hover { border-bottom-color:currentColor; }
+  .md h1 { font-size:30px; line-height:1.3; margin:8px 0 6px; }
+  .md h2 { font-size:22px; margin:0 0 12px; padding-top:6px; }
+  .md h3 { font-size:17px; margin:22px 0 8px; }
+  .md p { margin:8px 0; }
+  .md ul, .md ol { margin:8px 0; padding-left:22px; }
+  .md li { margin:4px 0; }
+  .md ul { list-style:disc; }
+  .md ol { list-style:decimal; }
+  .md [id] { scroll-margin-top:72px; }
+  .md-lead { color:var(--mute); margin:0 0 18px; }
+  .md-sec { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:22px 24px; margin:18px 0; }
+  .md-kv { display:grid; grid-template-columns:auto 1fr; gap:6px 16px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:14px 18px; margin:12px 0; }
+  .md-kv b { color:var(--g); white-space:nowrap; }
+  .dark .md-kv b { color:#a9d48a; }
+  .md-kv code { word-break:break-all; }
+  .md code { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:13.5px; background:var(--code); border:1px solid var(--line); border-radius:6px; padding:1px 5px; }
+  .md pre { background:var(--code); border:1px solid var(--line); border-radius:12px; padding:14px 16px; overflow-x:auto; margin:10px 0 14px; line-height:1.6; }
+  .md pre code { background:none; border:0; padding:0; font-size:13px; white-space:pre; }
+  .md-label { display:inline-block; font-size:12px; font-weight:600; color:var(--mute); margin:10px 0 -4px; }
+  .md table { width:100%; border-collapse:collapse; margin:10px 0 14px; font-size:14px; }
+  .md th, .md td { border:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+  .md th { background:var(--code); font-weight:600; }
+  .md-table { overflow-x:auto; }
+  .md-toc { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px 22px; margin:18px 0; }
+  .md .md-toc ol { margin:6px 0 0; padding-left:0; list-style:none; columns:2; column-gap:28px; }
+  .md-toc li { break-inside:avoid; }
+  .md ol.md-steps { counter-reset:s; list-style:none; padding:0; margin:12px 0; }
+  .md-steps > li { counter-increment:s; position:relative; padding:2px 0 10px 44px; margin:0; }
+  .md-steps > li::before { content:counter(s); position:absolute; left:0; top:2px; width:30px; height:30px; border-radius:50%; background:var(--g); color:#fff; font-weight:700; display:flex; align-items:center; justify-content:center; }
+  .md-note { border-radius:12px; padding:10px 14px; margin:12px 0; border:1px solid var(--warnline); background:var(--warnbg); font-size:14px; }
+  .md-tip { border-radius:12px; padding:10px 14px; margin:12px 0; border:1px solid var(--line); background:var(--tip); font-size:14px; }
+  .md details { border:1px solid var(--line); border-radius:12px; padding:10px 14px; margin:8px 0; background:var(--card); }
+  .md summary { cursor:pointer; font-weight:600; }
+  .md details[open] summary { margin-bottom:6px; }
+  .md-pill { display:inline-block; font-size:12px; padding:1px 8px; border-radius:999px; background:var(--tip); border:1px solid var(--line); color:var(--mute); margin-left:6px; vertical-align:middle; }
+  .md-foot { text-align:center; color:var(--mute); font-size:13px; padding:12px 0 0; }
+  @media (max-width:760px) {
+    .md { font-size:15px; }
+    .md-wrap { padding:18px 12px 40px; }
+    .md h1 { font-size:24px; }
+    .md h2 { font-size:19px; }
+    .md-sec { padding:16px 14px; border-radius:14px; }
+    .md .md-toc ol { columns:1; }
+    .md-kv { grid-template-columns:1fr; gap:2px; }
+    .md-kv b { margin-top:6px; }
+    .md pre code { font-size:12.5px; }
+  }
+</style>
+<div class="md">
+<div class="md-wrap">
+
+<h1>抹茶公益站 使用文档</h1>
+<p class="md-lead">从注册到第一次成功调用，跟着做大约 5 分钟。本站兼容 OpenAI、Claude、Gemini 三种接口格式，大部分 AI 工具只要换个地址和 Key 就能用。</p>
+
+<div class="md-kv">
+  <b>接口地址（Base URL）</b><span><code>https://router.matchacake.net/v1</code></span>
+  <b>API Key</b><span>在控制台「API 密钥」页面创建，形如 <code>sk-xxxx</code></span>
+  <b>模型名</b><span>在「模型广场」查看，例如 <code>antigravity/gemini-3-flash</code></span>
+</div>
+
+<div class="md-toc">
+  <b>目录</b><span class="md-pill">往下滑动依次阅读</span>
+  <ol>
+    <li>1. 先认识 4 个词</li>
+    <li>2. 快速开始（4 步）</li>
+    <li>3. 接入常用工具</li>
+    <li>4. 用代码调用（Python / Node.js）</li>
+    <li>5. HTTP API 说明</li>
+    <li>6. 模型、分组与计费</li>
+    <li>7. 报错怎么办（错误码）</li>
+    <li>8. 常见问题</li>
+  </ol>
+</div>
+
+<!-- 1 -->
+<div class="md-sec" id="terms">
+<h2>1. 先认识 4 个词</h2>
+<div class="md-table"><table>
+  <tr><th style="width:26%">名词</th><th>是什么</th></tr>
+  <tr><td>API Key（令牌）</td><td>相当于你的“通行证 + 钱包钥匙”。工具拿着它来调用模型，费用从你的账户余额里扣。<b>不要发给别人</b>，泄露了就去控制台删掉重建。</td></tr>
+  <tr><td>Base URL（接口地址）</td><td>告诉工具“去哪里找模型”。本站是 <code>https://router.matchacake.net/v1</code>。有的工具只要填到域名，见第 3 节。</td></tr>
+  <tr><td>模型名</td><td>你要用哪个模型，必须<b>一字不差</b>地填写，包括前面的 <code>antigravity/</code>、<code>devin/</code>、<code>openai/</code> 前缀。</td></tr>
+  <tr><td>分组</td><td>创建令牌时选择。不同分组能用的模型不同（见第 6 节）。选错分组是“模型不存在”报错最常见的原因。</td></tr>
+</table></div>
+</div>
+
+<!-- 2 -->
+<div class="md-sec" id="quick-start">
+<h2>2. 快速开始（4 步）</h2>
+<ol class="md-steps">
+  <li><b>注册并登录</b><br>打开 <a href="/sign-up">注册页面</a>，用户名 + 密码即可注册，然后登录进入<a href="/dashboard">控制台</a>。</li>
+  <li><b>准备额度</b><br>新账号默认余额为 0，需要先在控制台左侧「<a href="/wallet">钱包</a>」充值或使用兑换码。支持支付宝、微信、USDT，最低 $1 起，实际支付金额以钱包页显示为准。</li>
+  <li><b>创建 API Key</b><br>进入控制台「<a href="/keys">API 密钥</a>」，点「创建 API 密钥」：
+    <ul>
+      <li>名称随便填，比如 <code>我的电脑</code>；</li>
+      <li><b>分组</b>：想用更多模型（Claude、GPT 等）选 <code>vip</code>；只用基础模型选 <code>default</code>；</li>
+      <li>额度可以设上限，防止被盗刷；不确定就勾选“无限配额”，它仍然只会花你账户里的余额。</li>
+    </ul>
+    创建后点这一行右侧的「⋯」→「复制密钥」，得到一串 <code>sk-</code> 开头的 Key。
+  </li>
+  <li><b>发起第一次调用</b><br>把下面命令里的 <code>sk-xxxx</code> 换成你的 Key，粘贴到终端（macOS 的“终端”、Windows 的 PowerShell 都可以）运行：</li>
+</ol>
+<span class="md-label">curl（macOS / Linux）</span>
+<pre><code>curl https://router.matchacake.net/v1/chat/completions \
+  -H "Authorization: Bearer sk-xxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "antigravity/gemini-3-flash",
+    "messages": [
+      {"role": "user", "content": "你好，请用一句话介绍你自己"}
+    ]
+  }'</code></pre>
+<span class="md-label">Windows PowerShell</span>
+<pre><code>$headers = @{ "Authorization" = "Bearer sk-xxxx" }
+$body = @{
+  model = "antigravity/gemini-3-flash"
+  messages = @(@{ role = "user"; content = "你好，请用一句话介绍你自己" })
+} | ConvertTo-Json -Depth 5
+$r = Invoke-RestMethod -Uri "https://router.matchacake.net/v1/chat/completions" `
+  -Method Post -Headers $headers -ContentType "application/json; charset=utf-8" `
+  -Body ([System.Text.Encoding]::UTF8.GetBytes($body))
+$r.choices[0].message.content</code></pre>
+<p>看到类似下面的结果就成功了，<code>choices[0].message.content</code> 就是模型的回答：</p>
+<pre><code>{
+  "object": "chat.completion",
+  "model": "gemini-3-flash",
+  "choices": [{
+    "index": 0,
+    "message": {"role": "assistant", "content": "你好！我是一个 AI 助手……"},
+    "finish_reason": "stop"
+  }],
+  "usage": {"prompt_tokens": 8, "completion_tokens": 27, "total_tokens": 35}
+}</code></pre>
+<div class="md-tip">不想敲命令？登录后控制台里的「游乐场」可以直接在网页里选模型聊天，用来确认账号和额度没问题。</div>
+</div>
+
+<!-- 3 -->
+<div class="md-sec" id="clients">
+<h2>3. 接入常用工具</h2>
+<p>不同工具对“地址要不要带 <code>/v1</code>”的要求不一样，照下面填就行。</p>
+<div class="md-tip">省事的办法：「API 密钥」列表里点 Key 右侧的「⋯」，「聊天」子菜单可以一键导入 Cherry Studio、DeepChat 等工具，「CC Switch」可以一键配置 Claude Code / Codex，省去手动填写。</div>
+
+<h3>Cherry Studio</h3>
+<ol>
+  <li>设置 → 模型服务 → 添加，提供商类型选 <b>OpenAI</b>；</li>
+  <li>API 密钥：<code>sk-xxxx</code>；API 地址：<code>https://router.matchacake.net</code>（不用加 <code>/v1</code>，软件会自动补）；</li>
+  <li>点「管理」拉取模型列表，勾选要用的模型，再点「检查」测试连通。</li>
+</ol>
+
+<h3>Chatbox</h3>
+<ol>
+  <li>设置 → 模型提供方 → 添加，选择 <b>OpenAI API 兼容</b>；</li>
+  <li>API 主机：<code>https://router.matchacake.net</code>，API 路径：<code>/v1/chat/completions</code>；</li>
+  <li>API 密钥填 <code>sk-xxxx</code>，模型名手动填写或点获取，例如 <code>antigravity/gemini-3-flash</code>。</li>
+</ol>
+
+<h3>Claude Code</h3>
+<p>Claude Code 走 Claude 格式接口，地址<b>不要</b>带 <code>/v1</code>。建议用 <code>vip</code> 分组的 Key，可选的 Claude 模型更多（<code>default</code> 分组只有 <code>antigravity/claude-*</code> 两个）。在终端里先设置环境变量再启动：</p>
+<span class="md-label">macOS / Linux</span>
+<pre><code>export ANTHROPIC_BASE_URL="https://router.matchacake.net"
+export ANTHROPIC_AUTH_TOKEN="sk-xxxx"
+export ANTHROPIC_MODEL="devin/anthropic/claude-opus-5-5"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="antigravity/gemini-3-flash"
+claude</code></pre>
+<span class="md-label">Windows PowerShell</span>
+<pre><code>$env:ANTHROPIC_BASE_URL = "https://router.matchacake.net"
+$env:ANTHROPIC_AUTH_TOKEN = "sk-xxxx"
+$env:ANTHROPIC_MODEL = "devin/anthropic/claude-opus-5-5"
+$env:ANTHROPIC_DEFAULT_HAIKU_MODEL = "antigravity/gemini-3-flash"
+claude</code></pre>
+<p>模型可以换成模型广场里任意一个你分组能用的模型。嫌每次设置麻烦，可以用 CC Switch 管理（「API 密钥」页 Key 右侧「⋯」→「CC Switch」一键导入）。</p>
+
+<h3>Codex（OpenAI Codex CLI）</h3>
+<p>编辑 <code>~/.codex/config.toml</code>（Windows 在 <code>C:\Users\你的用户名\.codex\config.toml</code>），加入：</p>
+<pre><code>model = "openai/gpt-6-sol"
+model_provider = "matcha"
+
+[model_providers.matcha]
+name = "Matcha"
+base_url = "https://router.matchacake.net/v1"
+env_key = "MATCHA_API_KEY"
+wire_api = "responses"</code></pre>
+<p>然后设置环境变量 <code>MATCHA_API_KEY=sk-xxxx</code> 再运行 <code>codex</code>。<code>openai/</code> 开头的模型需要 <code>vip</code> 分组。启动时如果提示“Model metadata … not found”，可以忽略，不影响使用。</p>
+
+<h3>其他 OpenAI 兼容工具</h3>
+<p>沉浸式翻译、LobeChat、OpenCat、各类插件等，只要支持“自定义 OpenAI 接口”，一般按这个规律填：</p>
+<ul>
+  <li>让你填 <b>Base URL / API 地址</b>：<code>https://router.matchacake.net/v1</code>；</li>
+  <li>让你填 <b>完整请求地址</b>：<code>https://router.matchacake.net/v1/chat/completions</code>；</li>
+  <li>让你填 <b>API Host / 服务器</b>，且工具会自己拼 <code>/v1</code>：<code>https://router.matchacake.net</code>。</li>
+</ul>
+<p>填错了也不要紧：测试时如果返回一大段网页代码（HTML），或者报 404，基本就是 <code>/v1</code> 多了或少了，换一种试试。</p>
+</div>
+
+<!-- 4 -->
+<div class="md-sec" id="code">
+<h2>4. 用代码调用</h2>
+<div class="md-note">建议把 Key 放在环境变量里，不要直接写进代码、更不要提交到 GitHub。下面为了好懂直接写了 <code>sk-xxxx</code>，记得替换。</div>
+
+<h3>Python（OpenAI 官方 SDK）</h3>
+<p>先安装：<code>pip install openai</code></p>
+<pre><code>from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://router.matchacake.net/v1",
+    api_key="sk-xxxx",  # 换成你的 Key
+)
+
+resp = client.chat.completions.create(
+    model="antigravity/gemini-3-flash",
+    messages=[
+        {"role": "system", "content": "你是一个乐于助人的助手。"},
+        {"role": "user", "content": "你好，请用一句话介绍你自己。"},
+    ],
+)
+print(resp.choices[0].message.content)</code></pre>
+
+<h3>Python 流式输出（像打字一样逐字返回）</h3>
+<pre><code>from openai import OpenAI
+
+client = OpenAI(base_url="https://router.matchacake.net/v1", api_key="sk-xxxx")
+
+stream = client.chat.completions.create(
+    model="antigravity/gemini-3-flash",
+    messages=[{"role": "user", "content": "写一首关于抹茶的四行小诗"}],
+    stream=True,
+)
+for chunk in stream:
+    if chunk.choices and chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+print()</code></pre>
+
+<h3>Node.js（OpenAI 官方 SDK）</h3>
+<p>先安装：<code>npm install openai</code>，把下面代码保存为 <code>demo.mjs</code>，运行 <code>node demo.mjs</code>：</p>
+<pre><code>import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "https://router.matchacake.net/v1",
+  apiKey: "sk-xxxx", // 换成你的 Key
+});
+
+const resp = await client.chat.completions.create({
+  model: "antigravity/gemini-3-flash",
+  messages: [{ role: "user", content: "你好，请用一句话介绍你自己。" }],
+});
+console.log(resp.choices[0].message.content);</code></pre>
+
+<h3>多轮对话</h3>
+<p>模型本身不记得上一句话。想让它“记住”，要把之前的问答按顺序一起发过去：</p>
+<pre><code>messages=[
+    {"role": "system", "content": "你是一个编程助手。"},
+    {"role": "user", "content": "什么是递归？"},
+    {"role": "assistant", "content": "递归就是函数调用自己……"},
+    {"role": "user", "content": "给我一个 Python 的例子"},
+]</code></pre>
+<p>历史越长，每次消耗的 token 越多，费用也越高。</p>
+</div>
+
+<!-- 5 -->
+<div class="md-sec" id="http-api">
+<h2>5. HTTP API 说明</h2>
+
+<h3>基础信息</h3>
+<div class="md-table"><table>
+  <tr><th style="width:26%">项目</th><th>说明</th></tr>
+  <tr><td>接口根地址</td><td><code>https://router.matchacake.net</code>（OpenAI 格式路径都以 <code>/v1</code> 开头）</td></tr>
+  <tr><td>协议</td><td>HTTPS，请求和响应都是 JSON，编码 UTF-8</td></tr>
+  <tr><td>鉴权</td><td>请求头 <code>Authorization: Bearer sk-xxxx</code>；Claude 格式也可用 <code>x-api-key: sk-xxxx</code>；Gemini 格式也可用 <code>x-goog-api-key: sk-xxxx</code></td></tr>
+  <tr><td>请求头</td><td><code>Content-Type: application/json</code></td></tr>
+</table></div>
+
+<h3>可用接口</h3>
+<div class="md-table"><table>
+  <tr><th>接口</th><th>方法与路径</th><th>用途</th></tr>
+  <tr><td>模型列表</td><td><code>GET /v1/models</code></td><td>列出<b>当前 Key 所在分组</b>能用的模型</td></tr>
+  <tr><td>对话（OpenAI 格式）</td><td><code>POST /v1/chat/completions</code></td><td>最通用，绝大多数工具都用它</td></tr>
+  <tr><td>Responses（OpenAI 新格式）</td><td><code>POST /v1/responses</code></td><td>Codex 等新工具使用</td></tr>
+  <tr><td>对话（Claude 格式）</td><td><code>POST /v1/messages</code></td><td>Claude Code、Anthropic SDK 使用</td></tr>
+  <tr><td>对话（Gemini 格式）</td><td><code>POST /v1beta/models/{模型名}:generateContent</code></td><td>Google Gemini SDK 使用</td></tr>
+  <tr><td>图片生成</td><td><code>POST /v1/images/generations</code></td><td><code>openai/gpt-image-*</code> 系列（需 <code>vip</code> 分组），返回 base64 图片</td></tr>
+</table></div>
+<p>不论用哪种格式，模型名都一样，计费也一样。</p>
+
+<h3>对话接口常用参数</h3>
+<div class="md-table"><table>
+  <tr><th>参数</th><th>必填</th><th>说明</th></tr>
+  <tr><td><code>model</code></td><td>是</td><td>模型名，必须与模型广场完全一致</td></tr>
+  <tr><td><code>messages</code></td><td>是</td><td>消息列表，每条有 <code>role</code>（<code>system</code> 设定 / <code>user</code> 用户 / <code>assistant</code> 模型）和 <code>content</code></td></tr>
+  <tr><td><code>stream</code></td><td>否</td><td><code>true</code> 时逐段返回（流式），默认 <code>false</code> 一次性返回</td></tr>
+  <tr><td><code>temperature</code></td><td>否</td><td>随机程度，越大越发散；不填用模型默认值</td></tr>
+  <tr><td><code>max_tokens</code></td><td>否</td><td>回答最多生成多少 token，可用来控制费用</td></tr>
+</table></div>
+
+<h3>流式响应长什么样</h3>
+<p>设置 <code>"stream": true</code> 后，服务器会一段一段地推送 <code>data:</code> 开头的行，最后以 <code>data: [DONE]</code> 结束。把每段 <code>delta.content</code> 拼起来就是完整回答：</p>
+<pre><code>data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"role":"assistant","content":"1，2，3！"}}]}
+
+data: {"object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":""},"finish_reason":"stop"}],"usage":{"prompt_tokens":4,"completion_tokens":6,"total_tokens":10}}
+
+data: [DONE]</code></pre>
+
+<h3>Claude 格式示例</h3>
+<pre><code>curl https://router.matchacake.net/v1/messages \
+  -H "x-api-key: sk-xxxx" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "antigravity/gemini-3-flash",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": "你好"}]
+  }'</code></pre>
+<p>用 Anthropic 官方 SDK 时，<code>base_url</code> 填 <code>https://router.matchacake.net</code>（不带 <code>/v1</code>）。</p>
+
+<h3>Gemini 格式示例</h3>
+<pre><code>curl "https://router.matchacake.net/v1beta/models/antigravity/gemini-3-flash:generateContent" \
+  -H "x-goog-api-key: sk-xxxx" \
+  -H "Content-Type: application/json" \
+  -d '{"contents": [{"parts": [{"text": "你好"}]}]}'</code></pre>
+
+<h3>查询可用模型</h3>
+<pre><code>curl https://router.matchacake.net/v1/models \
+  -H "Authorization: Bearer sk-xxxx"</code></pre>
+</div>
+
+<!-- 6 -->
+<div class="md-sec" id="models">
+<h2>6. 模型、分组与计费</h2>
+<h3>看有哪些模型</h3>
+<p>最准确的是顶部「<a href="/pricing">模型广场</a>」，那里有每个模型的价格和可用分组；也可以用上面的 <code>/v1/models</code> 接口查询。模型会随上游情况增减，以模型广场为准。</p>
+
+<h3>分组</h3>
+<div class="md-table"><table>
+  <tr><th style="width:20%">分组</th><th>能用什么</th></tr>
+  <tr><td><code>default</code></td><td>基础线路，主要是 <code>antigravity/</code> 开头的模型（Gemini 系列、Claude、gpt-oss 等少量模型）</td></tr>
+  <tr><td><code>vip</code></td><td>全部模型，包括 <code>devin/</code>、<code>openai/</code> 开头的 Claude、GPT、DeepSeek、Kimi、GLM、Grok 以及图片模型</td></tr>
+</table></div>
+<p>两个分组目前价格倍率相同（都是 1 倍），所以一般直接选 <code>vip</code> 就好。分组是跟着 Key 走的：同一个账号可以建多个不同分组的 Key。</p>
+
+<h3>怎么计费</h3>
+<ul>
+  <li>按实际用量扣费：输入多少、输出多少 token 就扣多少，每个模型的单价见模型广场；</li>
+  <li>站内余额以美元（$）显示；</li>
+  <li>每次调用的花费可以在控制台「使用日志」里查到；</li>
+  <li>本站目前没有对单个用户设置每分钟请求次数限制，但上游线路繁忙时可能会临时返回 429（见下一节）。</li>
+</ul>
+</div>
+
+<!-- 7 -->
+<div class="md-sec" id="errors">
+<h2>7. 报错怎么办（错误码）</h2>
+<p>出错时返回内容一般是这样，看 <code>message</code> 就知道原因：</p>
+<pre><code>{"error": {"code": "model_not_found", "message": "分组 default 下模型 gpt-4o 无可用渠道（distributor） (request id: …)", "type": "new_api_error"}}</code></pre>
+<div class="md-table"><table>
+  <tr><th style="width:15%">状态码</th><th style="width:30%">常见提示</th><th>是什么意思 / 怎么办</th></tr>
+  <tr><td>401</td><td><code>Invalid token</code> / <code>无效的令牌</code></td><td>Key 填错、多复制了空格、Key 已删除或已禁用；令牌设置的额度用完后也会变成这个错误。去「API 密钥」页检查状态，必要时调高令牌额度后重新启用，或新建一个。</td></tr>
+  <tr><td>403</td><td><code>用户额度不足</code></td><td>账户余额用完了，去「钱包」充值或兑换。</td></tr>
+  <tr><td>403</td><td>令牌无权访问该模型</td><td>创建 Key 时开启了“模型限制”，而请求的模型不在列表里。编辑 Key 放开限制即可。</td></tr>
+  <tr><td>429</td><td><code>model_cooldown</code> / <code>cooling down</code></td><td>这个模型的上游线路暂时繁忙。等一会儿再试，或换一个模型。</td></tr>
+  <tr><td>503</td><td><code>model_not_found</code>：分组 xxx 下模型 xxx 无可用渠道</td><td>模型名写错，或你的 Key 所在分组不能用这个模型。对照模型广场检查拼写（包括前缀），或换 <code>vip</code> 分组的 Key。</td></tr>
+  <tr><td>400 / 5xx</td><td>上游返回的错误</td><td>多数是上游线路临时问题，稍后重试或换模型。持续出现请把 <code>request id</code> 发给站长。</td></tr>
+  <tr><td>返回一段 HTML</td><td>以 <code>&lt;!doctype html&gt;</code> 开头</td><td>地址填错了，通常是少了 <code>/v1</code>。</td></tr>
+</table></div>
+</div>
+
+<!-- 8 -->
+<div class="md-sec" id="faq">
+<h2>8. 常见问题</h2>
+<details><summary>注册了为什么不能用？</summary><p>新账号余额是 0，需要先在「钱包」充值或用兑换码，才能调用模型。</p></details>
+<details><summary>Base URL 到底要不要加 /v1？</summary><p>写代码（OpenAI SDK）、大多数工具的“API 地址”：加 <code>/v1</code>。Claude Code、Anthropic SDK、Cherry Studio、Chatbox 的“API 主机”：不加。拿不准就两种都试一下。</p></details>
+<details><summary>模型名为什么这么长？能写成 gpt-4o 吗？</summary><p>不能。模型名前缀（<code>antigravity/</code>、<code>devin/</code>、<code>openai/</code>）代表不同线路，必须完整填写，否则会报“无可用渠道”。复制模型广场里的名字最保险。</p></details>
+<details><summary>在 Cherry Studio 里拉取的模型列表很少？</summary><p>列表只显示你这个 Key 所在分组能用的模型。<code>default</code> 分组模型较少，新建一个 <code>vip</code> 分组的 Key 就能看到全部。</p></details>
+<details><summary>能用 ChatGPT / Claude 官方网页或 App 吗？</summary><p>不能。本站提供的是 API，需要在支持自定义接口的第三方工具或你自己的代码里使用。</p></details>
+<details><summary>回答到一半断了 / 很慢？</summary><p>长回答建议开启流式（<code>stream: true</code>），边生成边显示，体验更好。如果某个模型经常超时，可以换同类其他模型试试。</p></details>
+<details><summary>怎么看自己花了多少钱？</summary><p>控制台「数据看板」看总体用量，「使用日志」看每一次调用用了哪个模型、多少 token、扣了多少额度。</p></details>
+<details><summary>Key 泄露了怎么办？</summary><p>立刻在「API 密钥」页面删除或禁用它，再新建一个。建议每个工具单独建一个 Key，并给 Key 设置额度上限，出问题时影响最小。</p></details>
+<details><summary>还是不行，找谁？</summary><p>把报错信息里的 <code>request id</code>、用的模型名、工具名称发给站长，排查会快很多。请不要把完整的 Key 发出来。</p></details>
+</div>
+
+<div class="md-foot">© 2026 抹茶公益站 · 让 AI 更简单，让好工具触手可及</div>
+</div>
+</div>
