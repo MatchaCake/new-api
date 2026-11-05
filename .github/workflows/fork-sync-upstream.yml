@@ -62,6 +62,13 @@ jobs:
               exit 0
             fi
           elif ! git rebase upstream/main; then
+            {
+              echo "### Rebase conflict; main and fork-latest were not changed"
+              echo '```'
+              git log -1 --oneline REBASE_HEAD
+              git diff --name-only --diff-filter=U
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
             git rebase --abort
             echo "::error::Rebase onto upstream/main conflicts; resolve manually. main and fork-latest were not changed."
             exit 1
@@ -78,6 +85,35 @@ jobs:
             git log --oneline upstream/main..HEAD
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # An upstream refactor can rebase cleanly and still break fork code. Catch
+      # that before the image build and put the compiler output in the run summary.
+      - name: Set up Go
+        if: steps.rebase.outputs.changed == 'true'
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+
+      - name: Compile check
+        if: steps.rebase.outputs.changed == 'true'
+        run: |
+          # main.go embeds web/dist, which only the image build produces.
+          mkdir -p web/dist
+          touch web/dist/index.html
+          BUILD_RC=0
+          go build ./... > "$RUNNER_TEMP/go-build.log" 2>&1 || BUILD_RC=$?
+          rm -rf web/dist
+          cat "$RUNNER_TEMP/go-build.log"
+          if [ "$BUILD_RC" -ne 0 ]; then
+            {
+              echo "### Fork code no longer compiles on upstream $(git rev-parse --short upstream/main); main and fork-latest were not changed"
+              echo '```'
+              grep -v '^go: downloading' "$RUNNER_TEMP/go-build.log" | head -50
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::Fork code does not compile on upstream/main; see the run summary. main and fork-latest were not changed."
+            exit 1
+          fi
 
       - name: Set up Docker Buildx
         if: steps.rebase.outputs.changed == 'true'
