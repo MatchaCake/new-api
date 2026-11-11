@@ -19,5 +19,6 @@ func SetDashboardRouter(router *gin.Engine) {
 		apiRouter.GET("/v1/dashboard/billing/subscription", controller.GetSubscription)
 		apiRouter.GET("/dashboard/billing/usage", controller.GetUsage)
 		apiRouter.GET("/v1/dashboard/billing/usage", controller.GetUsage)
+		apiRouter.GET("/v1/balance", controller.GetMatchaBalance) // fork-only, see docs/matcha/balance-api.md
 	}
 }
