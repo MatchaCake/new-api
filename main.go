@@ -340,6 +340,11 @@ func InitResources() error {
 		common.FatalLog(common.LogText("failed to initialize database: %s", err.Error()))
 		return err
 	}
+	// fork: encrypt channel keys at rest when MATCHA_CHANNEL_KEY_ENCRYPTION_KEY is set
+	if err = model.InitChannelKeyEncryption(); err != nil {
+		common.FatalLog(common.LogText("failed to initialize channel key encryption: %s", err.Error()))
+		return err
+	}
 	// Before the loads below: a write made while they run is reloaded later.
 	service.ReadStartupSyncRevisions()
 	if err = authz.Init(model.DB); err != nil {
