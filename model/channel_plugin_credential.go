@@ -90,7 +90,7 @@ func UpdateChannelLocked(channelID int, update func(channel *Channel) error) (*C
 		if err := DB.Where("id = ?", channelID).First(&channel).Error; err != nil {
 			return nil, err
 		}
-		stored := channel.Key
+		stored := channelKeyStoredValue(channelID, channel.Key) // fork: compare the stored (maybe encrypted) value
 		updates, err := changes()
 		if err != nil {
 			return nil, err
