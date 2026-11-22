@@ -65,6 +65,8 @@ var accessTokenExemptRoutes = []string{
 	"POST /api/waffo-pancake/webhook/:env",
 	"GET /api/user/epay/notify",
 	"POST /api/user/epay/notify",
+	"GET /api/user/epay/relay",
+	"POST /api/user/epay/relay",
 	"GET /api/subscription/epay/notify",
 	"POST /api/subscription/epay/notify",
 	"GET /api/subscription/epay/return",

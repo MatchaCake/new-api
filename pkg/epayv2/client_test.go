@@ -212,3 +212,40 @@ func TestAmountMatches(t *testing.T) {
 		assert.Equal(t, tc.want, AmountMatches(tc.expected, tc.money), "%v vs %q", tc.expected, tc.money)
 	}
 }
+
+// Fork: the relay page (controller/topup_epay_relay.go) forwards only order
+// forms this merchant signed, to the URL Purchase itself would return.
+func TestSubmitURLAndMerchantSignature(t *testing.T) {
+	keys := newTestKeys(t)
+	merchant, gateway := newMerchantAndGateway(t, keys)
+	notifyURL, _ := url.Parse("https://site.example.com/api/user/epay/notify")
+	returnURL, _ := url.Parse("https://site.example.com/usage-logs")
+	uri, params, err := merchant.Purchase(&epay.PurchaseArgs{
+		Type: "alipay", ServiceTradeNo: "USR1NOrelay", Name: "抹茶 赞助", Money: "7.00",
+		NotifyUrl: notifyURL, ReturnUrl: returnURL,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, uri, merchant.SubmitURL())
+	assert.Equal(t, "https://pay.example.com/api/pay/submit", merchant.SubmitURL())
+
+	assert.True(t, merchant.VerifyMerchantSignature(params))
+
+	changed := maps.Clone(params)
+	changed["money"] = "0.01"
+	assert.False(t, merchant.VerifyMerchantSignature(changed), "a changed value breaks the signature")
+
+	md5 := maps.Clone(params)
+	md5["sign_type"] = "MD5"
+	assert.False(t, merchant.VerifyMerchantSignature(md5))
+
+	noSign := maps.Clone(params)
+	delete(noSign, "sign")
+	assert.False(t, merchant.VerifyMerchantSignature(noSign))
+
+	// Signed by someone else (here: the platform key) is not ours.
+	foreign := maps.Clone(params)
+	foreign["sign"], err = gateway.Sign(params)
+	require.NoError(t, err)
+	assert.False(t, merchant.VerifyMerchantSignature(foreign))
+	assert.False(t, merchant.VerifyMerchantSignature(nil))
+}

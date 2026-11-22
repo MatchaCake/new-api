@@ -213,3 +213,29 @@ func AmountMatches(expected float64, callbackMoney string) bool {
 	}
 	return decimal.NewFromFloat(expected).Round(2).Equal(got.Round(2))
 }
+
+// SubmitURL is the gateway's page-jump endpoint, the same URL Purchase returns.
+func (c *Client) SubmitURL() string {
+	u := *c.BaseURL
+	u.Path = path.Join(u.Path, SubmitPath)
+	return u.String()
+}
+
+// VerifyMerchantSignature reports whether params carry a valid signature made
+// with this merchant's own private key, i.e. they are an order form produced by
+// Purchase (callbacks are signed with the platform key instead; see Verify).
+func (c *Client) VerifyMerchantSignature(params map[string]string) bool {
+	if params == nil || params["sign_type"] != SignType {
+		return false
+	}
+	content, err := signingString(params)
+	if err != nil {
+		return false
+	}
+	sig, err := base64.StdEncoding.DecodeString(params["sign"])
+	if err != nil || len(sig) == 0 {
+		return false
+	}
+	digest := sha256.Sum256([]byte(content))
+	return rsa.VerifyPKCS1v15(&c.privateKey.PublicKey, crypto.SHA256, digest[:], sig) == nil
+}

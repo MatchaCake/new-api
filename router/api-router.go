@@ -88,6 +88,8 @@ func SetApiRouter(router *gin.Engine) {
 			//userRoute.POST("/tokenlog", middleware.CriticalRateLimit(), controller.TokenLog)
 			userRoute.POST("/epay/notify", anonymousRequestBodyLimit, controller.EpayNotify)
 			userRoute.GET("/epay/notify", controller.EpayNotify)
+			userRoute.GET("/epay/relay", middleware.DisableCache(), controller.EpayRelay)
+			userRoute.POST("/epay/relay", anonymousRequestBodyLimit, middleware.DisableCache(), controller.EpayRelay)
 			userRoute.GET("/groups", controller.GetUserGroups)
 
 			selfRoute := userRoute.Group("/")
